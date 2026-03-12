@@ -243,6 +243,14 @@
     els.searchContainer.style.display = 'grid';
     els.list.style.display = 'grid';
 
+    // #region agent log
+    // Hypothesis: todos is not an array in render
+    if (!Array.isArray(todos)) {
+        console.error('todos is not an array in render!', todos);
+        todos = [];
+    }
+    // #endregion
+
     const filtered = todos
       .filter(t => state.filter === 'all' || (state.filter === 'done' ? t.done : !t.done))
       .filter(t => {
@@ -325,10 +333,22 @@
       tag: (els.newTag.value.trim() || '').replace(/\s+/g, '').replace(/#+/, '#'),
       due: els.newDue.value || undefined,
       created: Date.now(),
-      order: todos.length ? Math.max(...todos.map(x => x.order || 0)) + 1 : 0,
+      // #region agent log
+      // Hypothesis: todos is undefined
+      // #endregion
+      order: (todos && todos.length) ? Math.max(...todos.map(x => x.order || 0)) + 1 : 0,
     };
+    // #region agent log
+    // Hypothesis: todos is defined but not an array
+    if (!Array.isArray(todos)) {
+      console.error('todos is not an array!', todos);
+      todos = [];
+    }
+    fetch('http://127.0.0.1:7749/ingest/d7621c59-6658-4b91-a40a-de3c0d3df610',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'a95df7'},body:JSON.stringify({sessionId:'a95df7',location:'app.js:add',message:'Pushing to todos',data:{todosIsArray:Array.isArray(todos), todosValue:todos},timestamp:Date.now()})}).catch(()=>{});
+    // #endregion
     todos.push(t);
     await saveTodo(t);
+    playSound('add');
     els.newTask.value = ''; els.newTag.value = ''; els.newDue.value = '';
     render();
   }
@@ -337,6 +357,7 @@
     const t = todos.find(x => x.id === id);
     if (!t) return;
     t.done = !t.done;
+    playSound('complete');
     await saveTodo(t);
     render();
   }
@@ -354,6 +375,7 @@
   }
 
   async function remove(id) {
+    playSound('delete');
     todos = todos.filter(x => x.id !== id);
     await deleteTodo(id);
     render();
@@ -423,7 +445,14 @@
   auth.onAuthStateChanged(async (user) => {
     if (user) {
       showView(false);
+      // #region agent log
+      // Hypothesis: load() returns undefined, but we assign it to todos
+      // #endregion
       todos = await load();
+      // #region agent log
+      // Fix: Ensure todos is an array
+      // #endregion
+      if (!Array.isArray(todos)) todos = [];
       render();
       const footerNote = $('.footer div:last-child');
       if (footerNote) {
@@ -438,6 +467,7 @@
   // App controls (bound once; only take effect when logged in)
   els.filterRadios.forEach(input => input.addEventListener('change', () => {
     if (!input.checked) return;
+    playSound('click');
     state.filter = input.value;
     render();
   }));
