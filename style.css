@@ -858,6 +858,13 @@ h1 {
 
   .input__container {
     width: 100%;
+    min-height: 60px; /* Smaller height for mobile */
+    padding: 12px;
+  }
+
+  .input__field {
+    padding: 8px 10px;
+    font-size: 16px; /* Prevents zoom on iOS */
   }
 
   .comic-brutal-button-container {
@@ -868,6 +875,26 @@ h1 {
 
   .meta {
     margin-left: 0;
+  }
+  
+  /* Improve touch targets */
+  .icon-btn {
+    width: 44px;
+    height: 44px;
+  }
+  
+  .glitch-checkbox-container {
+    touch-action: manipulation;
+  }
+}
+
+/* Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+  *, ::before, ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }
 

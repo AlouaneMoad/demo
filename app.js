@@ -39,13 +39,59 @@
     footer: $('.footer'),
     searchContainer: $('#searchContainer'),
     taskFormContainer: $('#taskFormContainer'),
+    footerNote: null
   };
+
+  // Initialize Footer Note reference
+  els.footerNote = els.footer.lastElementChild;
+
+  // Service Worker Registration
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('./sw.js')
+      .then(() => console.log('Service Worker Registered'))
+      .catch(err => console.error('SW Registration Failed', err));
+  }
+
+  // Debounce Utility
+  function debounce(func, wait) {
+    let timeout;
+    return function(...args) {
+      clearTimeout(timeout);
+      timeout = setTimeout(() => func.apply(this, args), wait);
+    };
+  }
 
   /** @type {Array<{id:string,title:string,done:boolean,tag?:string,due?:string,created:number,order:number}>} */
   let todos = [];
   const state = { filter: 'active', query: '', isSignUp: false };
+  const LOCAL_STORAGE_KEY = 'todo_data';
 
   function uid() { return Math.random().toString(36).slice(2, 9); }
+
+  function updateConnectionStatus(isOnline) {
+    if (!els.footerNote) return;
+    if (isOnline) {
+      els.footerNote.textContent = 'Synced with Firestore';
+      els.footerNote.style.color = 'var(--success)';
+    } else {
+      els.footerNote.textContent = 'Offline Mode - Changes saved locally';
+      els.footerNote.style.color = 'var(--danger)';
+    }
+  }
+
+  // Listen for online/offline events
+  window.addEventListener('online', () => updateConnectionStatus(true));
+  window.addEventListener('offline', () => updateConnectionStatus(false));
+
+  // Local Storage Helpers
+  function saveLocal() {
+    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(todos));
+  }
+
+  function loadLocal() {
+    const data = localStorage.getItem(LOCAL_STORAGE_KEY);
+    return data ? JSON.parse(data) : [];
+  }
 
   function setAuthHint(msg, isError = false) {
     els.authHint.textContent = msg || '';
@@ -65,22 +111,43 @@
   }
 
   async function load() {
+    // Load local data first for instant availability
+    todos = loadLocal();
+    render();
+
     const col = todosCollection();
-    if (!col) return [];
+    if (!col) return;
     try {
       const snap = await col.get();
       const arr = snap.docs.map(d => {
         const data = d.data();
         return { id: d.id, ...data, order: data.order ?? 0 };
       });
-      return arr.sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+      
+      // Merge remote data (simplistic merge: overwrite local)
+      // In a real app, you'd want to merge more carefully
+      todos = arr.sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+      saveLocal(); // Update local cache
+      render();
     } catch (e) {
       console.error('Firestore load error', e);
-      return [];
+      updateConnectionStatus(false);
     }
   }
 
-  async function saveTodo(t) {
+  async function saveTodo(t, isRemote = true) {
+    // Always save locally first
+    const localIndex = todos.findIndex(x => x.id === t.id);
+    if (localIndex >= 0) {
+      todos[localIndex] = t;
+    } else {
+      todos.push(t);
+    }
+    saveLocal();
+
+    // Then attempt to save remotely if online and requested
+    if (!isRemote) return;
+
     const col = todosCollection();
     if (!col) return;
     try {
@@ -92,12 +159,20 @@
         created: t.created,
         order: t.order
       });
+      updateConnectionStatus(true);
     } catch (e) {
       console.error('Firestore save error', e);
+      updateConnectionStatus(false);
     }
   }
 
-  async function deleteTodo(id) {
+  async function deleteTodo(id, isRemote = true) {
+    // Local delete
+    todos = todos.filter(x => x.id !== id);
+    saveLocal();
+
+    if (!isRemote) return;
+
     const col = todosCollection();
     if (!col) return;
     try {
@@ -118,6 +193,23 @@
     if (delta === -1) return 'yesterday';
     const opts = { month: 'short', day: 'numeric', timeZone: 'UTC' };
     return dUTC.toLocaleDateString(undefined, opts);
+  }
+
+  // Mobile Touch Support
+  let touchStartX = 0;
+  let touchEndX = 0;
+
+  function handleSwipe(node, id) {
+    if (touchEndX < touchStartX - 50) {
+      // Swiped Left -> Delete
+      if (confirm('Delete this task?')) {
+        remove(id);
+      }
+    }
+    if (touchEndX > touchStartX + 50) {
+      // Swiped Right -> Toggle
+      toggle(id);
+    }
   }
 
   function render() {
@@ -173,6 +265,15 @@
     for (const t of filtered) {
       const node = els.template.content.firstElementChild.cloneNode(true);
       node.dataset.id = t.id;
+
+      // Touch Event Listeners
+      node.addEventListener('touchstart', e => {
+        touchStartX = e.changedTouches[0].screenX;
+      });
+      node.addEventListener('touchend', e => {
+        touchEndX = e.changedTouches[0].screenX;
+        handleSwipe(node, t.id);
+      });
 
       const inputEl = node.querySelector('.task-check-input');
       const titleEl = node.querySelector('.task-title');
@@ -340,7 +441,12 @@
     state.filter = input.value;
     render();
   }));
-  els.search.addEventListener('input', () => { state.query = els.search.value.trim(); render(); });
+  
+  const debouncedRender = debounce(() => render(), 300);
+  els.search.addEventListener('input', () => { 
+    state.query = els.search.value.trim(); 
+    debouncedRender();
+  });
   els.addBtn.addEventListener('click', add);
   els.newTask.addEventListener('keydown', e => { if (e.key === 'Enter') add(); });
 
