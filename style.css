@@ -45,7 +45,6 @@ body {
   min-height: 100%;
   display: grid;
   place-items: center;
-  padding: 48px 24px;
 }
 
 .app {
@@ -278,7 +277,7 @@ h1 {
   position: absolute;
   top: 0;
   bottom: 0;
-  width: calc(100% / 3);
+  width: calc(100% / 4);
   border-radius: 999px;
   z-index: 1;
   transition:
@@ -291,18 +290,23 @@ h1 {
     inset 0 8px 0 rgba(255, 255, 255, 0.15);
 }
 
-#filter-active:checked ~ .comic-glider {
+#filter-create:checked ~ .comic-glider {
   transform: translateX(0%);
+  background: linear-gradient(135deg, #ff9e32, #ff5b4d);
+}
+
+#filter-active:checked ~ .comic-glider {
+  transform: translateX(100%);
   background: linear-gradient(135deg, #ffe156, #ffc93c);
 }
 
 #filter-done:checked ~ .comic-glider {
-  transform: translateX(100%);
+  transform: translateX(200%);
   background: linear-gradient(135deg, #7fffd4, #58e0b5);
 }
 
 #filter-all:checked ~ .comic-glider {
-  transform: translateX(200%);
+  transform: translateX(300%);
   background: linear-gradient(135deg, #ff5b4d, #ff9e32);
 }
 
@@ -847,7 +851,7 @@ h1 {
 
   .comic-radio-group label {
     min-width: 0;
-    flex: 1 1 33.333%;
+    flex: 1 1 25%;
     font-size: 18px;
     padding: 0.6rem 0.8rem;
   }

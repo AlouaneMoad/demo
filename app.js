@@ -36,6 +36,7 @@
     addBtn: $('#addBtn'),
     filterRadios: $$('input[name="filter"]'),
     count: $('#count'),
+    footer: $('.footer'),
   };
 
   /** @type {Array<{id:string,title:string,done:boolean,tag?:string,due?:string,created:number,order:number}>} */
@@ -119,8 +120,34 @@
 
   function render() {
     if (!els.list) return;
+    // Clear list
     els.list.innerHTML = '';
+    
+    // Update radio buttons
     els.filterRadios.forEach(input => { input.checked = input.value === state.filter; });
+
+    // Handle 'create' filter
+    if (state.filter === 'create') {
+      // Show toolbar (form)
+      els.newTask.closest('.toolbar').style.display = 'grid';
+      // Hide the list area
+      els.list.style.display = 'none';
+      
+      // Create empty state message
+      const empty = document.createElement('div');
+      empty.className = 'empty';
+      empty.innerHTML = 'Use the form below to add a new task.';
+      return;
+    }
+
+    // For other filters (active, done, all)
+    // Hide the toolbar
+    els.newTask.closest('.toolbar').style.display = 'none';
+    els.list.style.display = 'grid';
+    // So I should hide the toolbar.
+    els.newTask.closest('.toolbar').style.display = 'none';
+    els.list.style.display = 'grid';
+
     const filtered = todos
       .filter(t => state.filter === 'all' || (state.filter === 'done' ? t.done : !t.done))
       .filter(t => {
