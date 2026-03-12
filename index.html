@@ -78,7 +78,7 @@
         </div>
       </header>
 
-      <div class="toolbar">
+      <div id="searchContainer" class="toolbar" style="display: none;">
         <div class="input__container" data-label="SEARCH">
           <div class="shadow__input"></div>
           <input
@@ -89,6 +89,9 @@
             aria-label="Search tasks"
           />
         </div>
+      </div>
+
+      <div class="toolbar" id="taskFormContainer" style="display: none;">
         <div class="input__container" data-label="TASK">
           <div class="shadow__input"></div>
           <input

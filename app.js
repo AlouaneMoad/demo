@@ -37,6 +37,8 @@
     filterRadios: $$('input[name="filter"]'),
     count: $('#count'),
     footer: $('.footer'),
+    searchContainer: $('#searchContainer'),
+    taskFormContainer: $('#taskFormContainer'),
   };
 
   /** @type {Array<{id:string,title:string,done:boolean,tag?:string,due?:string,created:number,order:number}>} */
@@ -129,9 +131,11 @@
     // Handle 'create' filter
     if (state.filter === 'create') {
       // Show toolbar (form)
-      els.newTask.closest('.toolbar').style.display = 'grid';
+      els.taskFormContainer.style.display = 'grid';
       // Hide the list area
       els.list.style.display = 'none';
+      // Hide search
+      els.searchContainer.style.display = 'none';
       
       // Create empty state message
       const empty = document.createElement('div');
@@ -143,9 +147,8 @@
     // For other filters (active, done, all)
     // Hide the toolbar
     els.newTask.closest('.toolbar').style.display = 'none';
-    els.list.style.display = 'grid';
-    // So I should hide the toolbar.
-    els.newTask.closest('.toolbar').style.display = 'none';
+    // Show search
+    els.searchContainer.style.display = 'grid';
     els.list.style.display = 'grid';
 
     const filtered = todos
